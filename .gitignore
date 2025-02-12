@@ -1,4 +1,6 @@
 .cache/
+.pytest_cache/
+__pycache__/
 
 # built binaries
 build/

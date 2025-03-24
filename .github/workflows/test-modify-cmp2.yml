@@ -1,0 +1,49 @@
+name: "Build and Test Examples - Modify cmp2"
+
+on:
+  pull_request:
+  repository_dispatch:
+    types: [build-examples]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-examples-modify-cmp2:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:release-v5.4
+    steps:
+      - uses: espressif/build-esp-idf-projects-action@v1
+        id: build
+        with:
+          paths: "examples;examples/test-cmp2"
+          target: esp32
+          modified_files: "components/cmp2/cmp2.c;"
+          artifact_name: app_binaries_modify_cmp2
+      - uses: actions/download-artifact@v4
+      - name: check cmp1 project skipped
+        run: |
+          apt update && apt install -y jq
+          [ "$(grep -c '^{' app_info_1.txt)" -eq 3 ]
+          [ "$(grep 'test-cmp1"' app_info_1.txt | jq -r .build_status)" = "skipped" ]
+          [ "$(grep 'test-cmp1-cmp2"' app_info_1.txt | jq -r .build_status)" = "build success" ]
+          [ "$(grep 'test-cmp2"' app_info_1.txt | jq -r .build_status)" = "build success" ]
+    outputs:
+      test_matrix_json: ${{ steps.build.outputs.test_matrix_json }}
+
+  test-examples-modify-cmp2:
+    needs: [build-examples-modify-cmp2]
+    strategy:
+      matrix: ${{ fromJSON(needs.build-examples-modify-cmp2.outputs.test_matrix_json) }}
+      fail-fast: false
+    runs-on: ${{ matrix.runner_tags }}
+    container:
+      image: python:3
+      options: --privileged
+    steps:
+      - uses: espressif/test-esp-idf-projects-action@v1
+        with:
+          nodes: ${{ matrix.nodes }}
+          junit_filepath: report-${{ matrix.targets }}-${{ matrix.env_markers }}.xml

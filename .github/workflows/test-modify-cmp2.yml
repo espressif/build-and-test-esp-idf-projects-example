@@ -2,8 +2,14 @@ name: "Build and Test Examples - Modify cmp2"
 
 on:
   pull_request:
-  repository_dispatch:
-    types: [build-examples]
+  workflow_dispatch:
+    inputs:
+      build_action_branch:
+        description: 'Branch of espressif/build-esp-idf-projects-action to use'
+        default: 'v1'
+      test_action_branch:
+        description: 'Branch of espressif/test-esp-idf-projects-action to use'
+        default: 'v1'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,7 +21,7 @@ jobs:
     container:
       image: espressif/idf:release-v5.4
     steps:
-      - uses: espressif/build-esp-idf-projects-action@v1
+      - uses: espressif/build-esp-idf-projects-action@${{ inputs.build_action_branch }}
         id: build
         with:
           paths: "examples;examples/test-cmp2"
@@ -43,7 +49,7 @@ jobs:
       image: python:3
       options: --privileged
     steps:
-      - uses: espressif/test-esp-idf-projects-action@v1
+      - uses: espressif/test-esp-idf-projects-action@${{ inputs.test_action_branch }}
         with:
           nodes: ${{ matrix.nodes }}
           junit_filepath: report-${{ matrix.targets }}-${{ matrix.env_markers }}.xml
